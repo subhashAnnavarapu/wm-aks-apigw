@@ -1,0 +1,175 @@
+# Development Environment Values for WebMethods API Gateway
+
+environment: dev
+
+# Global configuration
+global:
+  environment: dev
+  namespace: webmethods-apigw
+  domain: dev.example.com
+
+# API Gateway specific values
+apiGateway:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_api_gw
+    tag: "11.1.3"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+    port: 5555
+    sslPort: 5543
+    targetPort: 5555
+    targetSslPort: 5543
+  
+  ingress:
+    enabled: false
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: api-gateway.dev.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-gateway-tls
+        hosts:
+          - api-gateway.dev.example.com
+  
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"
+    limits:
+      memory: "3Gi"
+      cpu: "2000m"
+  
+  javaOpts: "-Xms1024m -Xmx2048m -Dcom.wm.codeGeneration.useLocalTemp=true"
+  
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# OpenSearch configuration
+opensearch:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_opensearch
+    tag: "2.19.1"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 9200
+    nodeCommPort: 9300
+  
+  persistence:
+    enabled: true
+    storageClass: managed-premium
+    size: 10Gi
+    mountPath: /usr/share/opensearch/data
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  javaOpts: "-Xms512m -Xmx512m"
+  
+  config:
+    cluster:
+      name: webmethods-opensearch
+    discovery:
+      type: single-node
+    security:
+      disabled: true
+
+# OpenSearch Dashboard configuration
+opensearchDashboard:
+  enabled: true
+  replicaCount: 1
+  
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_dashboards
+    tag: "2.19.1"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5601
+  
+  ingress:
+    enabled: false
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: dashboards.dev.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: dashboards-tls
+        hosts:
+          - dashboards.dev.example.com
+  
+  opensearchHost: opensearch
+  opensearchPort: 9200
+  opensearchUsername: admin
+  opensearchPassword: admin
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Image pull secrets for ACR
+imagePullSecrets:
+  - name: acr-secret
+
+# Node selector for pod placement
+nodeSelector: {}
+
+# Tolerations for node taints
+tolerations: []
+
+# Pod affinity rules
+affinity: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: false
+  fsGroup: 1001
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false

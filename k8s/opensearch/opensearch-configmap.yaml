@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: webmethods-apigw
+data:
+  opensearch.yml: |
+    cluster.name: webmethods-opensearch
+    node.name: ${HOSTNAME}
+    discovery.type: single-node
+    node.data: true
+    node.master: true
+    node.ingest: true
+    
+    # Security Plugin Settings
+    plugins.security.disabled: false
+    plugins.security.ssl.http.enabled: false
+    plugins.security.ssl.transport.enabled: false
+    plugins.security.allow_default_init_securityindex: true
+    plugins.security.authcz.admin_dn:
+      - "CN=admin,OU=admin,O=admin,C=de"
+    
+    # Network Settings
+    network.host: 0.0.0.0
+    http.port: 9200
+    transport.port: 9300
+    
+    # Performance Settings
+    indices.memory.index_buffer_size: 30%
+    thread_pool.bulk.queue_size: 1000
+    thread_pool.write.queue_size: 1000
+    
+    # Recovery Settings
+    indices.recovery.max_bytes_per_sec: 100mb
+    cluster.routing.allocation.node_initial_primaries_recoveries: 4
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-env
+  namespace: webmethods-apigw
+data:
+  DISABLE_SECURITY_PLUGIN: "true"
+  cluster.name: "webmethods-opensearch"
+  discovery.type: "single-node"
+  JAVA_INITIAL_MEM: "512m"
+  JAVA_MAX_MEM: "512m"

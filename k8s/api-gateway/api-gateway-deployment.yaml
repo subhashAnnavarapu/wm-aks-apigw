@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: webmethods-apigw
+  labels:
+    app: api-gateway
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 5555
+      targetPort: 5555
+      name: http
+    - port: 5543
+      targetPort: 5543
+      name: https
+  selector:
+    app: api-gateway
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-internal
+  namespace: webmethods-apigw
+  labels:
+    app: api-gateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5555
+      targetPort: 5555
+      name: http
+    - port: 5543
+      targetPort: 5543
+      name: https
+    - port: 9200
+      targetPort: 9200
+      name: metrics
+  selector:
+    app: api-gateway
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: webmethods-apigw
+data:
+  server.conf: |
+    # API Gateway Configuration
+    watt.server.port=5555
+    watt.server.ssl.port=5543
+    watt.server.threadPoolSize=100
+    watt.server.controlThreadPoolSize=10
+    watt.server.maxConnections=2000
+    watt.server.sessionTimeout=3600
+    watt.server.keystore.alias=ssos
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: webmethods-apigw
+  labels:
+    app: api-gateway
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - api-gateway
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: api-gateway
+        image: wmaksdevsVXS.azurecr.io/webmethods-msr_api_gw:11.1.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5555
+          name: http
+        - containerPort: 5543
+          name: https
+        - containerPort: 9200
+          name: metrics
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms1024m -Xmx2048m -Dcom.wm.codeGeneration.useLocalTemp=true"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Dcom.sun.jndi.ldap.connect.pool=false"
+        - name: SAG_HOME
+          value: "/opt/softwareag"
+        - name: ELASTIC_SEARCH_HOST
+          value: "opensearch"
+        - name: ELASTIC_SEARCH_PORT
+          value: "9200"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "3Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: config
+          mountPath: /opt/softwareag/IntegrationServer/config
+        livenessProbe:
+          tcpSocket:
+            port: 5555
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 5555
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: config
+        configMap:
+          name: api-gateway-config
+      securityContext:
+        runAsNonRoot: false
+        fsGroup: 1001

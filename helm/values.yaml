@@ -1,0 +1,85 @@
+---
+# Global Settings
+global:
+  environment: dev
+  namespace: webmethods-apigw
+
+# API Gateway Settings
+apiGateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_api_gw
+    tag: "11.1.3"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 5555
+    sslPort: 5543
+  
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"
+    limits:
+      memory: "3Gi"
+      cpu: "2000m"
+  
+  javaOpts: "-Xms1024m -Xmx2048m"
+
+# OpenSearch Settings
+opensearch:
+  enabled: true
+  replicaCount: 1
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_opensearch
+    tag: "2.19.1"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 9200
+  
+  persistence:
+    enabled: true
+    size: 10Gi
+  
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+# OpenSearch Dashboard Settings
+opensearchDashboard:
+  enabled: true
+  replicaCount: 1
+  image:
+    registry: wmaksdevsVXS.azurecr.io
+    repository: webmethods-msr_dashboards
+    tag: "2.19.1"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5601
+  
+  opensearchHost: "opensearch"
+  opensearchPort: 9200
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Image Pull Secrets for ACR
+imagePullSecrets:
+  - name: acr-secret

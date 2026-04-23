@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: webmethods-apigw
+data:
+  server.conf: |
+    # API Gateway Configuration
+    watt.server.port=5555
+    watt.server.ssl.port=5543
+    watt.server.threadPoolSize=100
+    watt.server.controlThreadPoolSize=10
+    watt.server.maxConnections=2000
+    watt.server.sessionTimeout=3600
+    watt.server.keystore.alias=ssos
+    watt.server.ssl.enable=true
+    
+    # Gateway Settings
+    watt.gateway.timeout=120
+    watt.gateway.connection.timeout=30
+    watt.gateway.socket.timeout=30
+    
+    # Logging
+    watt.log.level=info
+    watt.log.file.maxSize=52428800
+    
+    # Performance Tuning
+    watt.net.maxHttpConnections=2000
+    watt.net.maxHttpConnectionsPerHost=100
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-env
+  namespace: webmethods-apigw
+data:
+  ELASTIC_SEARCH_HOST: "opensearch"
+  ELASTIC_SEARCH_PORT: "9200"
+  SAG_HOME: "/opt/softwareag"

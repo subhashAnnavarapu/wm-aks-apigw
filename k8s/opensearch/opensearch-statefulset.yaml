@@ -1,0 +1,140 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webmethods-apigw
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: webmethods-apigw
+data:
+  opensearch.yml: |
+    cluster.name: webmethods-opensearch
+    node.name: ${HOSTNAME}
+    discovery.type: single-node
+    node.data: true
+    node.master: true
+    node.ingest: true
+    plugins.security.disabled: false
+    plugins.security.ssl.http.enabled: false
+    plugins.security.ssl.transport.enabled: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch
+  namespace: webmethods-apigw
+  labels:
+    app: opensearch
+spec:
+  ports:
+    - port: 9200
+      targetPort: 9200
+      name: http
+    - port: 9300
+      targetPort: 9300
+      name: node-comm
+  clusterIP: None
+  selector:
+    app: opensearch
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch-api
+  namespace: webmethods-apigw
+  labels:
+    app: opensearch
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9200
+      targetPort: 9200
+      name: http
+  selector:
+    app: opensearch
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: webmethods-apigw
+spec:
+  serviceName: opensearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      containers:
+      - name: opensearch
+        image: wmaksdevsVXS.azurecr.io/webmethods-msr_opensearch:2.19.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9200
+          name: http
+        - containerPort: 9300
+          name: node-comm
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: DISABLE_SECURITY_PLUGIN
+          value: "true"
+        - name: cluster.name
+          value: "webmethods-opensearch"
+        - name: node.name
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: discovery.type
+          value: "single-node"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/opensearch/data
+        - name: config
+          mountPath: /usr/share/opensearch/config/opensearch.yml
+          subPath: opensearch.yml
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: config
+        configMap:
+          name: opensearch-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
