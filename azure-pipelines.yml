@@ -9,18 +9,18 @@ variables:
   acrName: "wmaksdevsVXS"
   imageRepository: "webmethods-msr_api_gw"
   imageTag: "11.1.3"
-  opensearchimageRepository: "webmethods-msr_opensearch"
-  opensearchimageTag: "2.19.1"
-  dashboardsimageRepository: "webmethods-msr_dashboards"
-  dashboardsimageTag: "2.19.1"
+  opensearchImageRepository: "webmethods-msr_opensearch"
+  opensearchImageTag: "2.19.1"
+  dashboardsImageRepository: "webmethods-msr_dashboards"
+  dashboardsImageTag: "2.19.1"
 
   # AKS Information
   aksResourceGroup: "rg-aks-wmaks-dev-eastus2"
-  aksClusterName: "wmaks-dev-aks"
+  aksClusterName: "wmapigw-dev-aks"
 
   # Helm Information
   namespace: "webmethods-apigw"
-  chartPath: "helm/webmethods-gateway"
+  chartPath: "helm"
 
 jobs:
   - deployment: Deploy
